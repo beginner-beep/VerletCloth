@@ -1,12 +1,38 @@
 import pygame
+pygame.font.init()
 import math
 SCREENWIDTH = 1000
 SCREENHEIGHT = 1000
-
+BLACK = 0,0,0
+WHITE = 255,255,255
+RED = 255,0,0
+GREEN = 0,255,0
+BLUE = 0,0,255
 clock = pygame.time.Clock()
 bounce = 0.95
 gravity = 0.5
 running = True
+font = pygame.font.SysFont(" comic sans ms", 15 )
+screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+
+class buttons:
+    def __init__(self,x,y,length,height,color,text):
+      self.x = x
+      self.y = y
+      self.length = length
+      self.height = height
+      self.color = color
+      self.text = text
+    def detectClick(self,mousepos):
+        if self.x <= mousepos[0] <= self.x + self.length and self.y <= mousepos[1] <= self.y + self.height:
+            return True
+    def drawButton(self):
+        button = pygame.Rect(self.x, self.y, self.length , self.height)
+        label = font.render(self.text,1, RED)
+        
+        pygame.draw.rect(screen, self.color, button)
+        dis = pygame.Surface.subsurface(screen,button)
+        dis.blit(label, (0, 0))
 class Nodes:
     def __init__(self, x, y, prevx, prevy, pinned):
         self.x = x
@@ -16,7 +42,7 @@ class Nodes:
         self.pinned = pinned
         
     def update(self):
-        #basic verlet movement
+        #basic verlet movement without acceleration or dt
         if self.pinned == True:
             return
         
@@ -46,22 +72,23 @@ class Nodes:
             self.prevy = self.y + vely * bounce
         elif self.y <0 :
             self.y = 0
-            self.prevy = self.y + vely * bounce
-def createCloth(listOfNodes,listOfSticks):
-   
-    for x in range(10,20):
-        for y in range(0,10):
-            listOfNodes.append(Nodes(x = x*30,y =150+y*50, prevx= 150, prevy = 150, pinned= False))
-    for x in range(0,10):
+            self.prevy = self.y + vely * bounce           
+def createCloth(listOfNodes,listOfSticks, n, m):
+    # n  is aantal nodes horizontaal
+    # m  is aantal nodes verticaal
+    for x in range(0,n):
+        for y in range(0,m):
+            listOfNodes.append(Nodes(x = 300 +x*30,y =150+y*50, prevx= 150, prevy = 150, pinned= False))
+    for x in range(0,n):
         listOfNodes[x*10].pinned = True
-    for N in range(0,10):
+    for N in range(0,20):
         for x in range(N*10,N*10+9):
             listOfSticks.append(sticks(point0= listOfNodes[x], point1 = listOfNodes[x+1], distance= distance(p0= listOfNodes[x], p1= listOfNodes[x+1]), hidden= False)) 
             try:
                 listOfSticks.append(sticks(point0= listOfNodes[x], point1 = listOfNodes[x+10], distance= distance(p0= listOfNodes[x], p1= listOfNodes[x+10]), hidden= False)) 
             except:
                 continue
-    for x in range(0,90, 10):
+    for x in range(0,n*10-10, 10):
         listOfSticks.append(sticks(point0= listOfNodes[x+9], point1 = listOfNodes[x+19], distance= distance(p0= listOfNodes[x+9], p1= listOfNodes[x+19]), hidden= False)) 
     
 class  sticks:
@@ -70,19 +97,20 @@ class  sticks:
         self.point1 = point1
         self.distance = distance
         self.hidden = hidden
+        
 def distance(p0,p1):
     dx = p0.x - p1.x
     dy = p1.y - p0.y
     distance = math.sqrt(dx* dx + dy* dy)
     return distance
 
-def drawSticks(listofsticks,screen):
+def drawSticks(listofsticks):
     for stick in listofsticks:
         if stick.hidden == True :
             continue
         pygame.draw.line(screen, (150,150,150), (stick.point0.x,stick.point0.y), (stick.point1.x , stick.point1.y), width = 3)      
       
-def drawNodes(listOfNodes, screen):
+def drawNodes(listOfNodes):
   for Node in listOfNodes:
      pygame.draw.circle(screen,[255,255,0], (Node.x,Node.y), 5)
      
@@ -93,7 +121,7 @@ def updatesticks(listofsticks):
         distance = math.sqrt(dx*dx + dy*dy)
         difference = stick.distance - distance
         percent = difference/distance/2
-        offsetx = dx* percent
+        offsetx = dx * percent
         offsety = dy * percent
         if stick.point0.pinned == False: 
           stick.point0.x -= offsetx
@@ -122,24 +150,30 @@ def createChainBlock(listOfNodes,listOfSticks):
     listOfSticks.append(sticks(point0= point2, point1 = point3, distance= distance(p0= point3, p1= point2) , hidden = False))
     listOfSticks.append(sticks(point0= point3, point1 = point1, distance= distance(p0= point1, p1= point3), hidden = False))
     listOfSticks.append(sticks(point0= point5, point1 = point1, distance= distance(p0= point1, p1= point4), hidden = False))  
-
+def calc(listOfNodes, listOfSticks):
+    for Node in listOfNodes:
+       Node.update()   
+    updatesticks(listOfSticks)
 def main():
     pygame.init()
     running = True
     listOfNodes = []
     listOfSticks =[]
     grabbedNode = Nodes(0,0,0,0,0)
-    screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+    
     pull = False
-    createCloth(listOfNodes,listOfSticks)
+    amountofiterations = 5
+    createCloth(listOfNodes,listOfSticks, n = 20, m = 10)
+    button1 = buttons(x=20,y = 800,length = 100, height=25, color= WHITE, text= "Hello")
     while running:
+        mousepos= pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pull = True
-                mousepos= pygame.mouse.get_pos()
-        
+                
                 for Node in listOfNodes:
                  if Node.x -10 <= mousepos[0] <= Node.x+10 and Node.y -10 <= mousepos[1] <= Node.y+10:
                     grabbedNode = Node
@@ -149,39 +183,35 @@ def main():
                     Node.prevy = mousepos[1]
                     Node.pinned = True
                     break
+                if button1.detectClick(mousepos=mousepos) == True:
+                     print("click")
             if event.type== pygame.MOUSEBUTTONUP:
               pull= False
               grabbedNode.pinned = False
               grabbedNode = Nodes(0,0,0,0,0)
         if pull ==True:
-            mousepos= pygame.mouse.get_pos()
-        
             grabbedNode.x = mousepos[0]
             grabbedNode.y = mousepos[1]
             grabbedNode.prevx = mousepos[0]
             grabbedNode.prevy = mousepos[1]
             
-        screen.fill((0,0,0))
-        clock.tick(30)
-       
-                       
-                    
         for Node in listOfNodes:
             Node.update()
             
         updatesticks(listOfSticks)
-       
-        for Node in listOfNodes:
+        for x in range(amountofiterations):    
+          for Node in listOfNodes:
             Node.constrainPoints()
         
-        updatesticks(listOfSticks)
-       
-        for Node in listOfNodes:
-            Node.constrainPoints()
-        updatesticks(listOfSticks)
-
-        drawNodes(listOfNodes, screen)
-        drawSticks(listOfSticks,screen)
+          updatesticks(listOfSticks)
+          
+        screen.fill((0,0,0))
+        clock.tick(30)
+        
+        
+        button1.drawButton()
+        drawNodes(listOfNodes)
+        drawSticks(listOfSticks)
         pygame.display.flip()
       
 if __name__ == "__main__":
