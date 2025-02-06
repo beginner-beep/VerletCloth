@@ -1,7 +1,7 @@
 import pygame
 pygame.font.init()
 import math
-SCREENWIDTH = 1000
+SCREENWIDTH = 1500
 SCREENHEIGHT = 1000
 BLACK = 0,0,0
 WHITE = 255,255,255
@@ -28,7 +28,7 @@ class buttons:
             return True
     def drawButton(self):
         button = pygame.Rect(self.x, self.y, self.length , self.height)
-        label = font.render(self.text,1, RED)
+        label = font.render(self.text,1, BLACK)
         
         pygame.draw.rect(screen, self.color, button)
         dis = pygame.Surface.subsurface(screen,button)
@@ -61,14 +61,14 @@ class Nodes:
         velx = self.x - self.prevx
         vely = self.y - self.prevy
        
-        if self.x > SCREENHEIGHT:
-            self.x = SCREENHEIGHT
+        if self.x > SCREENWIDTH:
+            self.x = SCREENWIDTH
             self.prevx = self.x + velx * bounce
         elif self.x < 0:
             self.x = 0
             self.prevx = self.x + velx * bounce
-        if self.y > SCREENWIDTH:
-            self.y = SCREENWIDTH
+        if self.y > SCREENHEIGHT:
+            self.y = SCREENHEIGHT
             self.prevy = self.y + vely * bounce
         elif self.y <0 :
             self.y = 0
@@ -76,21 +76,21 @@ class Nodes:
 def createCloth(listOfNodes,listOfSticks, n, m):
     # n  is aantal nodes horizontaal
     # m  is aantal nodes verticaal
-    for x in range(0,n):
-        for y in range(0,m):
-            listOfNodes.append(Nodes(x = 300 +x*30,y =150+y*50, prevx= 150, prevy = 150, pinned= False))
-    for x in range(0,n):
-        listOfNodes[x*10].pinned = True
-    for N in range(0,20):
-        for x in range(N*10,N*10+9):
-            listOfSticks.append(sticks(point0= listOfNodes[x], point1 = listOfNodes[x+1], distance= distance(p0= listOfNodes[x], p1= listOfNodes[x+1]), hidden= False)) 
-            try:
-                listOfSticks.append(sticks(point0= listOfNodes[x], point1 = listOfNodes[x+10], distance= distance(p0= listOfNodes[x], p1= listOfNodes[x+10]), hidden= False)) 
-            except:
-                continue
-    for x in range(0,n*10-10, 10):
-        listOfSticks.append(sticks(point0= listOfNodes[x+9], point1 = listOfNodes[x+19], distance= distance(p0= listOfNodes[x+9], p1= listOfNodes[x+19]), hidden= False)) 
+    #create nodes
+    for x in range(0,m):
+        for y in range(0,n):
+            listOfNodes.append(Nodes(x = 300 +y*30,y =150+x*50, prevx= 150, prevy = 150, pinned= True))
+    #create horizontal lines
+    for y in range(0,m):
+        for x in range(0,n-1):
+            listOfSticks.append(sticks(point0= listOfNodes[x+int(y*len(listOfNodes)/m)], point1 = listOfNodes[x+int(y*len(listOfNodes)/m)+1], distance= distance(p0= listOfNodes[x+int(y*len(listOfNodes)/m)], p1= listOfNodes[x+int(y*len(listOfNodes)/m)+1]), hidden= False)) 
+    # create vertical lines
+    for y in range(0,n):
+        for x in range(0,m-1):
+            listOfSticks.append(sticks(point0= listOfNodes[y + x * int(len(listOfNodes)/m)], point1 = listOfNodes[y + (x+1) * int(len(listOfNodes)/m)], distance= distance(p0= listOfNodes[y + x * int(len(listOfNodes)/m)], p1= listOfNodes[y + (x+1) * int(len(listOfNodes)/m)]), hidden= False)) 
     
+           
+   
 class  sticks:
     def __init__(self,point0,point1,distance, hidden):
         self.point0 = point0
@@ -164,7 +164,13 @@ def main():
     pull = False
     amountofiterations = 5
     createCloth(listOfNodes,listOfSticks, n = 20, m = 10)
-    button1 = buttons(x=20,y = 800,length = 100, height=25, color= WHITE, text= "Hello")
+    button1 = buttons(x=20,y = 800,length = 200, height=25, color= WHITE, text= "increase iterations " + str(amountofiterations))
+    button2 = buttons(x=20,y = 850,length = 200, height=25, color= RED, text= "decrease iterations " + str(amountofiterations))
+    button3 = buttons(x=20,y = 900,length = 200, height=25, color= RED, text= "restart")
+    listOfButtons = []
+    listOfButtons.append(button1)
+    listOfButtons.append(button2)
+    listOfButtons.append(button3)
     while running:
         mousepos= pygame.mouse.get_pos()
         for event in pygame.event.get():
@@ -173,7 +179,6 @@ def main():
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pull = True
-                
                 for Node in listOfNodes:
                  if Node.x -10 <= mousepos[0] <= Node.x+10 and Node.y -10 <= mousepos[1] <= Node.y+10:
                     grabbedNode = Node
@@ -184,7 +189,17 @@ def main():
                     Node.pinned = True
                     break
                 if button1.detectClick(mousepos=mousepos) == True:
-                     print("click")
+                     amountofiterations +=1
+                     button1.text = "increase iterations " + str(amountofiterations)
+                     button2.text = "decrease iterations " + str(amountofiterations)
+                if button2.detectClick(mousepos=mousepos) == True:
+                     amountofiterations -=1
+                     button1.text = "increase iterations " + str(amountofiterations)
+                     button2.text = "decrease iterations " + str(amountofiterations)
+                if button3.detectClick(mousepos=mousepos) == True:
+                    listOfNodes = []
+                    listOfSticks = []
+                    createCloth(listOfSticks=listOfSticks,listOfNodes=listOfNodes,n=10,m=20)
             if event.type== pygame.MOUSEBUTTONUP:
               pull= False
               grabbedNode.pinned = False
@@ -209,12 +224,11 @@ def main():
         clock.tick(30)
         
         
-        button1.drawButton()
+        for x in listOfButtons:
+            x.drawButton()
         drawNodes(listOfNodes)
         drawSticks(listOfSticks)
         pygame.display.flip()
       
 if __name__ == "__main__":
     main() 
-
-
